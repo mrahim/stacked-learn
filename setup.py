@@ -5,7 +5,7 @@ from numpy.distutils.core import setup
 
 
 descr = """A scikit-learn based library for prediction stacking."""
-DISTNAME = 'stacked-learn'
+DISTNAME = 'stlearn'
 DESCRIPTION = 'A scikit-learn based library for prediction stacking.'
 LONG_DESCRIPTION = descr
 MAINTAINER = 'Mehdi Rahim'
@@ -30,7 +30,7 @@ def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import Configuration
     config = Configuration(None, parent_package, top_path)
 
-    config.add_subpackage('cobre_analysis')
+    config.add_subpackage('stlearn')
 
     return config
 
