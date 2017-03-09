@@ -78,22 +78,23 @@ def test_stacking_essentials():
 
     assert_raises(ValueError, stacking.fit, X, y)
     stacking = StackingClassifier(
-        estimators=[LogisticRegression() for _ in range(3)],
+        estimators=[LogisticRegression() for _ in range(n_estimators)],
         feature_indices=[np.array([-500]), np.array([1]), np.array([2])],
         stacking_estimator=LogisticRegression())
 
     assert_raises(ValueError, stacking.fit, X_stacked, y)
 
     stacking = StackingClassifier(
-        estimators=[LogisticRegression() for _ in range(3)],
+        estimators=[LogisticRegression() for _ in range(n_estimators)],
         feature_indices=[slice(5000, -5000), slice(1, 10), slice(20)],
         stacking_estimator=LogisticRegression())
     assert_raises(ValueError, stacking.fit, X_stacked, y)
 
 
 def test_sklearn_high_level():
+    """Test high-level sklearn API"""
     stacking = StackingClassifier(
-        estimators=[LogisticRegression() for _ in range(3)],
+        estimators=[LogisticRegression() for _ in range(n_estimators)],
         feature_indices=feature_indices,
         stacking_estimator=LogisticRegression())
     assert_true(is_classifier(stacking))
