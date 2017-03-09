@@ -48,18 +48,19 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
         for i in range(self.n_outputs):
             if self.output_types[i] == 'binary':
                 # binarize
-                labels = np.zeros((len(Ypred[i])))
-                labels[Ypred[:, i] > 0] = 1
+                labels = np.zeros(Ypred[:, i].shape)
+                labels[Ypred[:, i] > 0.] = 1
                 Ypred[:, i] = labels
         return Ypred
 
     def score(self, X, Y):
         # predict multiple outputs
         # accuracy for regression and classification
+        Ypred = self.predict(X)
         scores = np.empty((self.n_outputs))
-        Ypred = self.estimator.predict(X)
         for i in range(self.n_outputs):
             if self.output_types[i] == 'binary':
-                scores[i] = accuracy_score(Y[:, i], Y_pred[:, i])
+                scores[i] = accuracy_score(Y[:, i], Ypred[:, i])
             elif self.output_types[i] == 'continuous':
                 scores[i] = r2_score(Y[:, i], Y_pred[:, i])
+        return scores
