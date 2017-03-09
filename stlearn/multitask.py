@@ -10,7 +10,8 @@ import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import accuracy_score, r2_score
 from sklearn.externals.joblib import Memory, Parallel, delayed
-from sklearn.linear_model import MultiTaskLassoCV, MultiTaskElasticNetCV
+from sklearn.linear_model import (
+    MultiTaskLassoCV, MultiTaskElasticNetCV, LogisticRegression)
 
 
 class MultiTaskEstimator(BaseEstimator, TransformerMixin):
@@ -44,12 +45,12 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
 
     def predict(self, X):
         # predict multiple outputs
-        Ypred = self.estimator._decision_function(X)
+        Ypred = self._decision_function(X)
         for i in range(self.n_outputs):
             if self.output_types[i] == 'binary':
-                # binarize
+                # binarize classification results
                 labels = np.zeros(Ypred[:, i].shape)
-                labels[Ypred[:, i] > 0.] = 1
+                labels[Ypred[:, i] >= 0.5] = 1
                 Ypred[:, i] = labels
         return Ypred
 
