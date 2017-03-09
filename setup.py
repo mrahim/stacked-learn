@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 import os
-import sys
-from numpy.distutils.core import setup
+from setuptools import setup
 
 
 descr = """A scikit-learn based library for prediction stacking."""
@@ -15,13 +14,6 @@ LICENSE = 'new BSD'
 DOWNLOAD_URL = 'https://github.com/mrahim/stacked-learn'
 VERSION = '0.alpha'
 
-if len(set(('develop', 'release', 'bdist_egg', 'bdist_rpm',
-            'bdist_wininst', 'install_egg_info', 'build_sphinx',
-            'egg_info', 'easy_install', 'upload',
-            '--single-version-externally-managed',
-            )).intersection(sys.argv)) > 0:
-    import setuptools
-
 
 def configuration(parent_package='', top_path=None):
     if os.path.exists('MANIFEST'):
@@ -33,6 +25,7 @@ def configuration(parent_package='', top_path=None):
     config.add_subpackage('stlearn')
 
     return config
+
 
 if __name__ == "__main__":
     setup(configuration=configuration,
