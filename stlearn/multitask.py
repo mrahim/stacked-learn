@@ -27,7 +27,7 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
                     {"binary", "continuous"}
     """
 
-    def __init__(self, estimator=None, output_types=None):
+    def __init__(self, estimator, output_types):
         self.estimator = estimator
         # check if output types are okay
         for output in output_types:
