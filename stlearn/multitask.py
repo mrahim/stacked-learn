@@ -65,18 +65,18 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        Ypred : array, shape = (n_samples, n_outputs)
+        Y_pred : array, shape = (n_samples, n_outputs)
             Predicted outputs per sample.
         """
         # predict multiple outputs
-        Ypred = self._decision_function(X)
+        Y_pred = self._decision_function(X)
         for i in range(self.n_outputs):
             if self.output_types[i] == 'binary':
                 # binarize classification results
-                labels = np.zeros(Ypred[:, i].shape)
-                labels[Ypred[:, i] >= 0.5] = 1
-                Ypred[:, i] = labels
-        return Ypred
+                labels = np.zeros(Y_pred[:, i].shape)
+                labels[Y_pred[:, i] >= 0.5] = 1
+                Y_pred[:, i] = labels
+        return Y_pred
 
     def score(self, X, Y):
         """Returns accuracy for each outputs.
@@ -89,20 +89,20 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
         X : array-like, shape = (n_samples, n_features)
             Sample matrix.
 
-        y : array-like, shape = (n_samples) or (n_samples, n_outputs)
+        Y : array-like, shape = (n_samples, n_outputs)
             True labels for X.
 
         Returns
         -------
         score : list of float, shape (n_outputs,)
-            Mean accuracy of self.predict(X) wrt. Y.
+            Accuracy of self.predict(X) wrt. Y.
         """
-        Ypred = self.predict(X)
+        Y_pred = self.predict(X)
         scores = np.empty((self.n_outputs))
         for i in range(self.n_outputs):
             # accuracy_score for classification
             if self.output_types[i] == 'binary':
-                scores[i] = accuracy_score(Y[:, i], Ypred[:, i])
+                scores[i] = accuracy_score(Y[:, i], Y_pred[:, i])
             # r2_score for regression
             elif self.output_types[i] == 'continuous':
                 scores[i] = r2_score(Y[:, i], Y_pred[:, i])
