@@ -12,6 +12,34 @@ from sklearn.metrics import accuracy_score
 from sklearn.externals.joblib import Memory, Parallel, delayed
 
 
+def stack_features(X):
+    """Stack features from sources
+
+    Parameters:
+    -----------
+    X : a list of 2d matrices
+
+    Returns:
+    --------
+    - Xstacked : (n_samples x (n_features*n_sources)) stacked 2d matrix
+
+    - features_indices : (n_features*n_sources) list of indices
+    """
+    X_stacked = np.hstack(X)
+
+    features_markers = np.r_[0, np.cumsum([x.shape[1] for x in X])]
+    feature_indices = [slice(features_markers[i],
+                             features_markers[i+1])
+                       for i in range(len(features_markers)-1)]
+
+    return X_stacked, feature_indices
+
+
+def _split_features(X, feature_indices):
+    """helper"""
+    return [X[:, fi] for fi in feature_indices]
+
+
 def _fit_estimator(clf, X, y):
     """Helper to fit estimator"""
     return clf.fit(X, y)
@@ -76,11 +104,13 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
 
     def __init__(self, estimators=None,
                  stacking_estimator=None,
+                 feature_indices=None,
                  memory=Memory(cachedir=None), memory_level=0,
                  n_jobs=1):
 
         self.estimators = estimators
         self.stacking_estimator = stacking_estimator
+        self.feature_indices = feature_indices
         self.memory = memory
         self.memory_level = memory_level
         self.n_jobs = n_jobs
@@ -90,22 +120,23 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
 
         Parameters
         ----------
-        X : {array-like, sparse-matrix}, shape (n_estimators, n_samples,
-                                                n_features)
+        X : {array-like, sparse-matrix}, shape (n_samples, n_features)
             Training vector, where n_samples is the number of samples and
             n_features is the number of features.
 
         y : array-like, shape (n_samples,)
             Target vector relative to X.
         """
-        _check_Xy(self, X, y)
+
+        X_list = _split_features(X, self.feature_indices)
+        _check_Xy(self, X_list, y)
         self.estimators = Parallel(n_jobs=self.n_jobs)(
             delayed(_fit_estimator)(clf, x, y)
-            for x, clf in zip(X, self.estimators))
+            for x, clf in zip(X_list, self.estimators))
 
         predictions_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_predict_proba_estimator)(clf, x)
-            for x, clf in zip(X, self.estimators))
+            for x, clf in zip(X_list, self.estimators))
         predictions_ = np.array(predictions_).T
 
         self.stacking_estimator.fit(predictions_, y)
@@ -116,8 +147,7 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
 
         Parameters
         ----------
-        X : {array-like, sparse matrix}, shape = (n_estimators,
-                                                  n_samples, n_features)
+        X : {array-like, sparse matrix}, shape = (n_samples, n_features)
             The multi-input samples.
 
         Returns
@@ -125,10 +155,11 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         C : array, shape = (n_samples)
             Predicted class label per sample.
         """
-        _check_Xy(self, X)
+        X_list = _split_features(X, self.feature_indices)
+        _check_Xy(self, X_list)
         predictions_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_predict_proba_estimator)(clf, x)
-            for x, clf in zip(X, self.estimators))
+            for x, clf in zip(X_list, self.estimators))
         predictions_ = np.array(predictions_).T
 
         return self.stacking_estimator.predict(predictions_)
@@ -142,7 +173,7 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
 
         Parameters
         ----------
-        X : array-like, shape = (n_estimators, n_samples, n_features)
+        X : array-like, shape = (n_samples, n_features)
             The multi-input samples.
 
         y : array-like, shape = (n_samples) or (n_samples, n_outputs)
@@ -154,7 +185,6 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         score : float
             Mean accuracy of self.predict(X) wrt. y.
         """
-        _check_Xy(self, X, y)
         return accuracy_score(y, self.predict(X))
 
     def predict_estimators(self, X):
@@ -162,8 +192,7 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
 
         Parameters
         ----------
-        X : {array-like, sparse matrix}, shape = (n_estimators,
-                                                  n_samples, n_features)
+        X : {array-like, sparse matrix}, shape = (n_samples, n_features)
             The multi-input samples.
 
         Returns
@@ -171,10 +200,11 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         C : array, shape = (n_samples, n_estimators)
             Predicted class label per sample and estimators.
         """
-        _check_Xy(self, X)
+        X_list = _split_features(X, self.feature_indices)
+        _check_Xy(self, X_list)
         predictions_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_predict_estimator)(clf, x)
-            for x, clf in zip(X, self.estimators))
+            for x, clf in zip(X_list, self.estimators))
         return np.array(predictions_).T
 
     def score_estimators(self, X, y):
@@ -186,7 +216,7 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
 
         Parameters
         ----------
-        X : array-like, shape = (n_estimators, n_samples, n_features)
+        X : array-like, shape = (n_samples, n_features)
             The multi-input samples.
 
         y : array-like, shape = (n_samples) or (n_samples, n_outputs)
@@ -197,6 +227,5 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         score : list of float, shape (n_estimators,)
             Mean accuracy of self.predict_estimators(X) wrt. y.
         """
-        _check_Xy(self, X, y)
         predictions_ = self.predict_estimators(X)
         return np.array([accuracy_score(y, p) for p in predictions_.T])

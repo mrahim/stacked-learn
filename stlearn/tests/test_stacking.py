@@ -13,7 +13,8 @@ n_samples = 200
 n_estimators = 2
 X0, y = make_classification(n_samples=200, random_state=42)
 X1 = X0 ** 2
-X = np.array([X0, X1])
+X = np.c_[X0, X1]
+
 ss = ShuffleSplit(n_splits=10, test_size=0.2, random_state=42)
 
 
