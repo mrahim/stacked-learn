@@ -3,33 +3,41 @@
 Prediction stacking API
 """
 # Author: Mehdi Rahim <rahim.mehdi@gmail.com>
+#         Denis A. Engemann <denis.engemann@gmail.com>
 #
 # License: BSD 3 clause
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
 from sklearn.metrics import accuracy_score
-from sklearn.externals.joblib import Memory, Parallel, delayed
+from sklearn.externals.joblib import Parallel, delayed
 
 
 def stack_features(X):
     """Stack features from sources
 
-    Parameters
-    ----------
-    X : a list of 2d matrices
+    Parameters:
+    -----------
+    X : list of array-like (n_samples, n_features)
+        The data to be used as source for each estimator. The first
+        dataset corresponds to the first estimator.
 
-    Returns
-    -------
-    Xstacked : shape = (n_samples, n_features*n_sources) stacked 2d matrix
-    features_indices : shape = (n_sources, ) list of indices
+    Returns:
+    --------
+    X_stacked : array, (n_samples, n_features)
+        The stacked data, such that the number of features corresponds
+        to the sum of number of featrues in each source.
+
+    features_indices : list of indexers
+        Index epxressions to be applied on the columns of X_stacked.
+        Can be slices, lists of intgers or bool.
     """
     X_stacked = np.hstack(X)
 
     features_markers = np.r_[0, np.cumsum([x.shape[1] for x in X])]
     feature_indices = [slice(features_markers[i],
-                             features_markers[i+1])
-                       for i in range(len(features_markers)-1)]
+                             features_markers[i + 1])
+                       for i in range(len(features_markers) - 1)]
 
     return X_stacked, feature_indices
 
@@ -66,23 +74,28 @@ def _predict_proba_estimator(clf, X):
 
 def _check_Xy(stacking, X, y=None):
     """check dimensions"""
-    if np.ndim(X) != 3:
-        raise ValueError(
-            'X must be 3 dimensional, your X has %d dimensions' % np.ndim(X))
-    expected_n_sources = len(stacking.estimators)
-    if expected_n_sources != np.asarray(X).shape[0]:
-        raise ValueError(
-            'The first axis of X (%d) should match the '
-            'number of estimators (%d)' % (
-                X.shape[0],
-                len(stacking.estimators)))
-    if y is not None:
-        if len(y) != np.asarray(X).shape[1]:
-            raise ValueError(
-                'The second axis of X (%d) should match the '
-                'number of samples (%d)' % (
-                    X.shape[1],
-                    len(stacking.estimators)))
+    if np.ndim(X) != 2:
+        raise ValueError('X_stacked must be a 2D array')
+
+    for ii, feat_inds in enumerate(stacking.feature_indices):
+        if not isinstance(X, np.ndarray):
+            raise ValueError('You have something else than an array in X[%d]'
+                             % ii)
+        if isinstance(feat_inds, (list, tuple, np.ndarray)):
+            this_max = np.max(feat_inds)
+            this_min = abs(np.min(feat_inds))
+            if this_max >= X.shape[1] or this_min > X.shape[1]:
+                raise ValueError('On source %s your indexer is out of bound'
+                                 % ii)
+        elif isinstance(feat_inds, slice):
+            stop = feat_inds.stop
+            start = feat_inds.start
+            if start is None:
+                start = 0
+            if stop is None:
+                stop = -1
+            if (start >= X.shape[1] or abs(stop) > X.shape[1]):
+                ValueError('Your slices are bad and generate empty views')
 
 
 class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
@@ -93,25 +106,29 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
     estimators : list of Estimator objects compatible with scikit-learn
         The estimators to be used with each source of inputs. Length must match
         the firt dimensions of X.
+
     stacking_estimator : Estimator objects compatible with scikit-learn
         The estimator used to integrate the predictions of the estimators.
-    memory : joblib memory object | None
-        The caching configuration. Defaults to `Memory(cachedir=None)`.
-    memory_level : int (defaults to 0)
-        The memory level used for caching.
+
+    features_indices : list of indexers
+        Index epxressions to be applied on the columns of X_stacked.
+        Can be slices, lists of intgers or bool.
     """
 
-    def __init__(self, estimators=None,
-                 stacking_estimator=None,
-                 feature_indices=None,
-                 memory=Memory(cachedir=None), memory_level=0,
+    def __init__(self, estimators,
+                 stacking_estimator,
+                 feature_indices,
                  n_jobs=1):
 
+        if len(estimators) != len(feature_indices):
+            raise ValueError('The estimators and feature indices must be of '
+                             'the same lenghts')
+
+        if len(set(estimators)) < len(estimators):
+            raise ValueError('Estimators must be indpendent')
         self.estimators = estimators
         self.stacking_estimator = stacking_estimator
         self.feature_indices = feature_indices
-        self.memory = memory
-        self.memory_level = memory_level
         self.n_jobs = n_jobs
 
     def fit(self, X, y):
@@ -127,8 +144,9 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
             Target vector relative to X.
         """
 
+        _check_Xy(self, X, y)
         X_list = _split_features(X, self.feature_indices)
-        _check_Xy(self, X_list, y)
+
         self.estimators = Parallel(n_jobs=self.n_jobs)(
             delayed(_fit_estimator)(clf, x, y)
             for x, clf in zip(X_list, self.estimators))
@@ -154,8 +172,8 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         C : array, shape = (n_samples)
             Predicted class label per sample.
         """
+        _check_Xy(self, X)
         X_list = _split_features(X, self.feature_indices)
-        _check_Xy(self, X_list)
         predictions_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_predict_proba_estimator)(clf, x)
             for x, clf in zip(X_list, self.estimators))
@@ -199,8 +217,8 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         C : array, shape = (n_samples, n_estimators)
             Predicted class label per sample and estimators.
         """
+        _check_Xy(self, X)
         X_list = _split_features(X, self.feature_indices)
-        _check_Xy(self, X_list)
         predictions_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_predict_estimator)(clf, x)
             for x, clf in zip(X_list, self.estimators))
