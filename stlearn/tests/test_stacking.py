@@ -8,6 +8,9 @@ from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from stlearn import StackingClassifier
 from stlearn import stack_features
+from sklearn.model_selection import cross_val_score
+from sklearn.base import is_classifier
+
 
 n_samples = 200
 n_estimators = 3
@@ -86,3 +89,13 @@ def test_stacking_essentials():
         feature_indices=[slice(5000, -5000), slice(1, 10), slice(20)],
         stacking_estimator=LogisticRegression())
     assert_raises(ValueError, stacking.fit, X_stacked, y)
+
+
+def test_sklearn_high_level():
+    stacking = StackingClassifier(
+        estimators=[LogisticRegression() for _ in range(3)],
+        feature_indices=feature_indices,
+        stacking_estimator=LogisticRegression())
+    assert_true(is_classifier(stacking))
+    scores = cross_val_score(X=X_stacked, y=y, estimator=stacking)
+    assert_equal(len(scores), 3)
