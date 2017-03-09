@@ -15,15 +15,15 @@ from sklearn.externals.joblib import Memory, Parallel, delayed
 def stack_features(X):
     """Stack features from sources
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     X : a list of 2d matrices
 
-    Returns:
-    --------
-    - Xstacked : (n_samples x (n_features*n_sources)) stacked 2d matrix
+    Returns
+    -------
+    Xstacked : (n_samples x (n_features*n_sources)) stacked 2d matrix
 
-    - features_indices : (n_features*n_sources) list of indices
+    features_indices : (n_features*n_sources) list of indices
     """
     X_stacked = np.hstack(X)
 

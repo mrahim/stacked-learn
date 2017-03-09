@@ -55,6 +55,24 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
         return Ypred
 
     def score(self, X, Y):
+        """Returns accuracy for each outputs.
+
+        r2_score is used for continuous outputs,
+        accuracy_score is used for binary outputs.
+
+        Parameters
+        ----------
+        X : array-like, shape = (n_samples, n_features)
+            The multi-input samples.
+
+        y : array-like, shape = (n_samples) or (n_samples, n_outputs)
+            True labels for X.
+
+        Returns
+        -------
+        score : list of float, shape (n_outputs,)
+            Mean accuracy of self.predict(X) wrt. Y.
+        """
         # predict multiple outputs
         # accuracy for regression and classification
         Ypred = self.predict(X)
