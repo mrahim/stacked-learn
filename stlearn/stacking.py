@@ -12,15 +12,18 @@ from sklearn.metrics import accuracy_score
 from sklearn.externals.joblib import Memory, Parallel, delayed
 
 
-def fit_estimator(clf, X, y):
+def _fit_estimator(clf, X, y):
+    """Helper to fit estimator"""
     return clf.fit(X, y)
 
 
-def predict_estimator(clf, X):
+def _predict_estimator(clf, X):
+    """Helper tor predict"""
     return clf.predict(X)
 
 
-def predict_proba_estimator(clf, X):
+def _predict_proba_estimator(clf, X):
+    """Helper to get prediction method"""
     # try predict_proba
     predict_proba = getattr(clf, "predict_proba", None)
     if callable(predict_proba):
@@ -56,11 +59,11 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         """
 
         self.estimators = Parallel(n_jobs=self.n_jobs)(
-            delayed(fit_estimator)(clf, x, y)
+            delayed(_fit_estimator)(clf, x, y)
             for x, clf in zip(X, self.estimators))
 
         predictions_ = Parallel(n_jobs=self.n_jobs)(
-            delayed(predict_proba_estimator)(clf, x)
+            delayed(_predict_proba_estimator)(clf, x)
             for x, clf in zip(X, self.estimators))
         predictions_ = np.array(predictions_).T
 
@@ -73,7 +76,7 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         """
 
         predictions_ = Parallel(n_jobs=self.n_jobs)(
-            delayed(predict_proba_estimator)(clf, x)
+            delayed(_predict_proba_estimator)(clf, x)
             for x, clf in zip(X, self.estimators))
         predictions_ = np.array(predictions_).T
 
@@ -88,7 +91,7 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         """ prediction from separate estimators
         """
         predictions_ = Parallel(n_jobs=self.n_jobs)(
-            delayed(predict_estimator)(clf, x)
+            delayed(_predict_estimator)(clf, x)
             for x, clf in zip(X, self.estimators))
         return np.array(predictions_).T
 
