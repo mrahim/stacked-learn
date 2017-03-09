@@ -9,22 +9,26 @@
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import accuracy_score, r2_score
-from sklearn.externals.joblib import Memory, Parallel, delayed
+from sklearn.externals.joblib import Parallel, delayed
 from sklearn.linear_model import (
     MultiTaskLassoCV, MultiTaskElasticNetCV, LogisticRegression)
 
 
 class MultiTaskEstimator(BaseEstimator, TransformerMixin):
     """MultiTask estimator for multiple (continuous / discrete) outputs.
+
+    Parameters
+    ----------
+    estimator : Multitask scikit-learn estimator, can be
+                {"MultiTaskLasso", "MultiTaskLassoCV",
+                 "MultiTaskElasticNet", "MultiTaskElasticNetCV"}
+
+    output_types : shape = (n_outputs,) type of each output, can be
+                    {"binary", "continuous"}
     """
 
-    def __init__(self, estimator=None,
-                 memory=Memory(cachedir=None), memory_level=0,
-                 n_jobs=1, output_types=None):
+    def __init__(self, estimator=None, output_types=None):
         self.estimator = estimator
-        self.memory = memory
-        self.memory_level = memory_level
-        self.n_jobs = n_jobs
         # check if output types are okay
         for output in output_types:
             if output not in ['binary', 'continuous']:
