@@ -33,6 +33,18 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
         self.n_outputs = len(self.output_types)
 
     def fit(self, X, Y):
+        """Fit estimator to the given training data and all outputs.
+
+        Parameters
+        ----------
+        X : {array-like, sparse-matrix}, shape (n_samples, n_features)
+            Training vector, where n_samples is the number of samples and
+            n_features is the number of features.
+
+        Y : array-like, shape (n_samples, n_outputs)
+            Target matrix relative to X.
+        """
+
         if Y.shape[1] != self.n_outputs:
             raise ValueError('Y columns=%u whereas n_outputs=%u'
                              % (Y.shape[1], self.output_types))
@@ -44,6 +56,18 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
         return self.estimator._decision_function(X)
 
     def predict(self, X):
+        """Predict outputs for samples in X.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape = (n_samples, n_features)
+            Sample matrix.
+
+        Returns
+        -------
+        Ypred : array, shape = (n_samples, n_outputs)
+            Predicted outputs per sample.
+        """
         # predict multiple outputs
         Ypred = self._decision_function(X)
         for i in range(self.n_outputs):
@@ -63,7 +87,7 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
         Parameters
         ----------
         X : array-like, shape = (n_samples, n_features)
-            The multi-input samples.
+            Sample matrix.
 
         y : array-like, shape = (n_samples) or (n_samples, n_outputs)
             True labels for X.
@@ -73,13 +97,13 @@ class MultiTaskEstimator(BaseEstimator, TransformerMixin):
         score : list of float, shape (n_outputs,)
             Mean accuracy of self.predict(X) wrt. Y.
         """
-        # predict multiple outputs
-        # accuracy for regression and classification
         Ypred = self.predict(X)
         scores = np.empty((self.n_outputs))
         for i in range(self.n_outputs):
+            # accuracy_score for classification
             if self.output_types[i] == 'binary':
                 scores[i] = accuracy_score(Y[:, i], Ypred[:, i])
+            # r2_score for regression
             elif self.output_types[i] == 'continuous':
                 scores[i] = r2_score(Y[:, i], Y_pred[:, i])
         return scores

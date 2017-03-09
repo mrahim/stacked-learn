@@ -21,9 +21,8 @@ def stack_features(X):
 
     Returns
     -------
-    Xstacked : (n_samples x (n_features*n_sources)) stacked 2d matrix
-
-    features_indices : (n_features*n_sources) list of indices
+    Xstacked : shape = (n_samples, n_features*n_sources) stacked 2d matrix
+    features_indices : shape = (n_sources, ) list of indices
     """
     X_stacked = np.hstack(X)
 
@@ -36,7 +35,7 @@ def stack_features(X):
 
 
 def _split_features(X, feature_indices):
-    """helper"""
+    """Helper"""
     return [X[:, fi] for fi in feature_indices]
 
 
