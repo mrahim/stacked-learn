@@ -92,11 +92,12 @@ def test_stacking_essentials():
 
 
 def test_sklearn_high_level():
-    """Test high-level sklearn API"""
+    """Test high-level sklearn API  """
     stacking = StackingClassifier(
         estimators=[LogisticRegression() for _ in range(n_estimators)],
         feature_indices=feature_indices,
         stacking_estimator=LogisticRegression())
     assert_true(is_classifier(stacking))
-    scores = cross_val_score(X=X_stacked, y=y, estimator=stacking)
+    scores = cross_val_score(X=X_stacked, y=y, estimator=stacking,
+                             scoring='roc_auc')
     assert_equal(len(scores), 3)
