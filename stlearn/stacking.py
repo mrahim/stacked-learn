@@ -181,6 +181,31 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
 
         return self.stacking_estimator.predict(predictions_)
 
+    def predict_proba(self, X):
+        """Predict class probability for samples in X.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape = (n_samples, n_features)
+            The multi-input samples.
+
+        Returns
+        -------
+        C : array, shape = (n_samples)
+            Predicted class label per sample.
+        """
+        _check_Xy(self, X)
+        X_list = _split_features(X, self.feature_indices)
+        predictions_ = Parallel(n_jobs=self.n_jobs)(
+            delayed(_predict_proba_estimator)(clf, x)
+            for x, clf in zip(X_list, self.estimators))
+        predictions_ = np.array(predictions_).T
+
+        return _predict_proba_estimator(self.stacking_estimator, predictions_)
+
+    def decision_function(self, X):
+        return self.predict_proba(X)
+
     def score(self, X, y):
         """Returns the mean accuracy on the given test data and labels.
 
