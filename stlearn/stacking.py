@@ -215,7 +215,7 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         return _predict_proba_estimator(self.stacking_estimator, predictions_)
 
     def decision_function(self, X):
-        return self.predict_proba(X)[:, -1]
+        return self._disambiguate_probability(self.predict_proba(X))
 
     def score(self, X, y):
         """Returns the mean accuracy on the given test data and labels.
