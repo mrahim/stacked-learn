@@ -59,10 +59,12 @@ def _predict_estimator(clf, X):
 
 def _predict_proba_estimator(clf, X):
     """Helper to get prediction method"""
+
+    # XXX this is not safe. Maybe add explicit 1st level scoring param.
     # try predict_proba
     predict_proba = getattr(clf, "predict_proba", None)
     if callable(predict_proba):
-        return clf.predict_proba(X)[:, 0]
+        return clf.predict_proba(X)
 
     # or decision_function
     decision_function = getattr(clf, "decision_function", None)
@@ -131,6 +133,9 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         self.feature_indices = feature_indices
         self.n_jobs = n_jobs
 
+    def _disambiguate_probability(self, x):
+        return x[:, -1] if np.ndim(x) > 1 else x
+
     def fit(self, X, y):
         """Fit all estimators according to the given training data.
 
@@ -154,6 +159,8 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         predictions_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_predict_proba_estimator)(clf, x)
             for x, clf in zip(X_list, self.estimators))
+        predictions_ = [self._disambiguate_probability(x)
+                        for x in predictions_]
         predictions_ = np.array(predictions_).T
 
         self.stacking_estimator.fit(predictions_, y)
@@ -177,6 +184,8 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         predictions_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_predict_proba_estimator)(clf, x)
             for x, clf in zip(X_list, self.estimators))
+        predictions_ = [self._disambiguate_probability(x)
+                        for x in predictions_]
         predictions_ = np.array(predictions_).T
 
         return self.stacking_estimator.predict(predictions_)
@@ -199,12 +208,14 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
         predictions_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_predict_proba_estimator)(clf, x)
             for x, clf in zip(X_list, self.estimators))
+        predictions_ = [self._disambiguate_probability(x)
+                        for x in predictions_]
         predictions_ = np.array(predictions_).T
 
         return _predict_proba_estimator(self.stacking_estimator, predictions_)
 
     def decision_function(self, X):
-        return self.predict_proba(X)
+        return self._disambiguate_probability(self.predict_proba(X))
 
     def score(self, X, y):
         """Returns the mean accuracy on the given test data and labels.
