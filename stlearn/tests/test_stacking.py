@@ -70,6 +70,11 @@ def test_stacking_essentials():
     proba = stacking.predict_proba(X_stacked)
     assert_array_equal(proba.sum(1), np.ones_like(proba[:, 1]))
 
+    proba_estimators = stacking.predict_proba_estimators(X_stacked)
+    for proba in np.transpose(proba_estimators, (2, 0, 1)):
+        assert_array_equal(proba.sum(1),
+                           np.ones_like(proba[:, 1]))
+
     score = stacking.score(X_stacked, y)
     assert_true(np.isscalar(score))
 
