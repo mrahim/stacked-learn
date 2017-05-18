@@ -115,6 +115,9 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
     features_indices : list of indexers
         Index epxressions to be applied on the columns of X_stacked.
         Can be slices, lists of intgers or bool.
+
+    n_jobs : int (default: 1)
+        The number of jobs to run in parallel (across estimators).
     """
 
     def __init__(self, estimators,
@@ -259,6 +262,27 @@ class StackingClassifier(BaseEstimator, ClassifierMixin, TransformerMixin):
             delayed(_predict_estimator)(clf, x)
             for x, clf in zip(X_list, self.estimators))
         return np.array(predictions_).T
+
+    def predict_proba_estimators(self, X):
+        """Predict class label probability for samples in X for each estimators.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape = (n_samples, n_features)
+            The multi-input samples.
+
+        Returns
+        -------
+        C : array, shape = (n_samples, n_classes, n_estimators)
+            Predicted class label per sample and estimators.
+        """
+        _check_Xy(self, X)
+        X_list = _split_features(X, self.feature_indices)
+        predictions_ = Parallel(n_jobs=self.n_jobs)(
+            delayed(_predict_proba_estimator)(clf, x)
+            for x, clf in zip(X_list, self.estimators))
+        return np.transpose(np.array(predictions_),
+                            (1, 2, 0))
 
     def score_estimators(self, X, y):
         """Returns the mean accuracy for each estimators.
